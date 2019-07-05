@@ -34,7 +34,7 @@ contract Token is ERC165, ERC721 {
     mapping (address => mapping(address => bool)) internal authorised;
 
     // Event
-    event Transfer(address tokenId, address creator, uint256 tokenNumber);
+    event Transfer(address from, address to, uint256 tokenId);
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
 
@@ -57,13 +57,13 @@ contract Token is ERC165, ERC721 {
         _registerInterface(_INTERFACE_ID_ERC721);
     }
 
-    function isValidToken(uint256 _tokenId) internal view returns(bool) {
-        return _tokenId != 0 && _tokenId <= maxId && !burned[_tokenId];
-    }
-
     // balance of owner
     function balanceOf(address _owner) public view returns (uint256) {
         return balances[_owner];
+    }
+
+    function isValidToken(uint256 _tokenId) internal view returns(bool) {
+        return _tokenId != 0 && _tokenId <= maxId && !burned[_tokenId];
     }
 
     // Owner of a tokenId
