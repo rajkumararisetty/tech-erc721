@@ -113,10 +113,9 @@ contract Token is ERC165, ERC721 {
 
     function approve(address _approved, uint256 _tokenId) public {
         address owner = ownerOf(_tokenId);
-        require(owner != msg.sender || authorised[owner][msg.sender]);
-
-        emit Approval(owner, _approved, _tokenId);
+        require(owner == msg.sender || authorised[owner][msg.sender]);
         allowance[_tokenId] = _approved;
+        emit Approval(owner, _approved, _tokenId);
     }
 
     function transferFrom(address _from, address _to, uint256 _tokenId) public {
