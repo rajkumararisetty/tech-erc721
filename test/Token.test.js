@@ -3,7 +3,7 @@ const Token = artifacts.require('Token');
 
 require('chai').use(require('chai-as-promised')).should();
 
-contract('Token', ([deployer, otherUser]) => {
+contract('Token', ([deployer, otherUser, operator]) => {
     let token;
     const initialBalance = 10;
     beforeEach(async () => {
@@ -105,6 +105,118 @@ contract('Token', ([deployer, otherUser]) => {
 
             it('burn others token', async () => {
                 await token.burnToken(2, {from: otherUser}).should.be.rejectedWith(EVM_REVERT);
+            });
+        });
+    });
+
+    describe('Approve for all tokens of owner', () => {
+        describe('Success approval', () => {
+            let result;
+            beforeEach(async () => {
+                result = await token.setApprovalForAll(operator, true, {from: deployer});
+            });
+
+            it('check approval status', async () => {
+                const status = await token.isApprovedForAll(deployer, operator);
+                status.should.equal(true);
+            });
+
+            it('set approval emits event', async () => {
+                const log = result.logs[0];
+                log.event.should.equal('ApprovalForAll');
+                const event = log.args;
+                event.owner.should.equal(deployer);
+                event.operator.should.equal(operator);
+                event.approved.should.equal(true);
+            });
+
+            it('remove approval all for operator', async () => {
+                let result = await token.setApprovalForAll(operator, false, {from: deployer});
+
+                const status = await token.isApprovedForAll(deployer, operator);
+                status.should.equal(false);
+
+                const log = result.logs[0];
+                log.event.should.equal('ApprovalForAll');
+                const event = log.args;
+                event.owner.should.equal(deployer);
+                event.operator.should.equal(operator);
+                event.approved.should.equal(false);
+            })
+        });
+
+        describe('Not approval all check', () => {
+            it('status false if not approved operator', async () => {
+                const status = await token.isApprovedForAll(deployer, operator);
+                status.should.equal(false);
+            });
+        });
+    });
+
+    describe('Approve specific token', () => {
+        const tokenId = 1;
+        describe('Success', () => {
+            let result;
+            beforeEach(async () => {
+                result = await token.approve(operator, tokenId, {from: deployer});
+            });
+
+            it('get token approval address', async () => {
+                const approvedAddress = await token.getApproved(tokenId);
+                approvedAddress.should.equal(operator);
+            });
+
+            it('event on token approval', async () => {
+                const log = result.logs[0];
+                log.event.should.equal('Approval');
+                const event = log.args;
+                event.owner.should.equal(deployer);
+                event.approved.should.equal(operator);
+                event.tokenId.toString().should.equal(tokenId.toString());
+            });
+        });
+
+        describe('Failure', () => {
+            it("try to approve for other's tokens", async () => {
+                await token.approve(operator, tokenId, {from: otherUser}).should.be.rejectedWith(EVM_REVERT);
+            });
+        });
+    });
+
+    describe('Transfer actions', () => {
+        describe('Success', () => {
+            describe('Transfer own tokens', () => {
+                let result;
+                let balance;
+                const tokenId = 1;
+                beforeEach(async () => {
+                    result = await token.transferFrom(deployer, otherUser, tokenId, {from: deployer});
+                });
+
+                it('Check balances', async () => {
+                    balance = await token.balanceOf(deployer);
+                    balance.toString().should.equal((initialBalance - 1).toString());
+
+                    balance = await token.balanceOf(otherUser);
+                    balance.toString().should.equal('1');
+                });
+
+                it('Transfer event emitted', async () => {
+                    const log = result.logs[0];
+                    log.event.should.equal('Transfer');
+                    const event = log.args;
+                    event.from.should.equal(deployer);
+                    event.to.should.equal(otherUser);
+                    event.tokenId.toString().should.equal(tokenId.toString());
+                });
+            });
+
+            describe('Transfer approved token', () => {
+
+            });
+
+            describe('Transfer tokens as operator(setApprovalForAll)', () => {
+
             });
         });
     });
