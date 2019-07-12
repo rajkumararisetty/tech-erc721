@@ -5,10 +5,12 @@ require('chai').use(require('chai-as-promised')).should();
 
 contract('Token', ([deployer, otherUser, operator]) => {
     let token;
+    let receiverContract;
     const initialBalance = 10;
     beforeEach(async () => {
         // Deploy token
         token = await Token.new(initialBalance);
+        receiverContract = await Token.new(1);
     });
 
     describe('Balance after deployemt', () => {
@@ -212,12 +214,131 @@ contract('Token', ([deployer, otherUser, operator]) => {
             });
 
             describe('Transfer approved token', () => {
+                let result;
+                let balance;
+                const tokenId = 2;
+                beforeEach(async () => {
+                    await token.approve(operator, tokenId, {from: deployer});
+                    result = await token.transferFrom(deployer, otherUser, tokenId, {from: operator});
+                });
 
+                it ('Check balances', async () => {
+                    balance = await token.balanceOf(deployer);
+                    balance.toString().should.equal((initialBalance - 1).toString());
+
+                    balance = await token.balanceOf(otherUser);
+                    balance.toString().should.equal('1');
+                });
+
+                it('Check approve status of trnasferred token', async () => {
+                    const address = await token.getApproved(tokenId);
+                    address.should.equal(DEFAULT_TOKEN_ADDRESS);
+                });
+
+                it('Transfer event emitted', async () => {
+                    const log = result.logs[0];
+                    log.event.should.equal('Transfer');
+                    const event = log.args;
+                    event.from.should.equal(deployer);
+                    event.to.should.equal(otherUser);
+                    event.tokenId.toString().should.equal(tokenId.toString());
+                });
             });
 
             describe('Transfer tokens as operator(setApprovalForAll)', () => {
+                let balance;
+                let result;
+                const tokenId = 3;
+                beforeEach(async () => {
+                    await token.setApprovalForAll(operator, true);
+                    result = await token.transferFrom(deployer, otherUser, tokenId, {from: operator});
+                });
 
+                it ('Check balances', async () => {
+                    balance = await token.balanceOf(deployer);
+                    balance.toString().should.equal((initialBalance - 1).toString());
+
+                    balance = await token.balanceOf(otherUser);
+                    balance.toString().should.equal('1');
+                });
+
+                it('Transfer event emitted', async () => {
+                    const log = result.logs[0];
+                    log.event.should.equal('Transfer');
+                    const event = log.args;
+                    event.from.should.equal(deployer);
+                    event.to.should.equal(otherUser);
+                    event.tokenId.toString().should.equal(tokenId.toString());
+                });
             });
         });
+
+        describe('Failure', () => {
+            it('Send tokens to blank address', async () => {
+                await token.transferFrom(deployer, DEFAULT_TOKEN_ADDRESS, 1, {from: deployer}).should.be.rejectedWith(EVM_REVERT);
+            });
+
+            it('send others tokens', async () => {
+                await token.transferFrom(deployer, otherUser, 1, {from: operator}).should.be.rejectedWith(EVM_REVERT);
+            });
+        });
+    });
+
+    describe('Safe Transfer', () => {
+        describe('tokens to another account', () => {
+            let result;
+            let balance;
+            const tokenId = 1;
+            beforeEach(async () => {
+                result = await token.safeTransferFrom(deployer, otherUser, tokenId, {from: deployer});
+            });
+
+            it('Check balances', async () => {
+                balance = await token.balanceOf(deployer);
+                balance.toString().should.equal((initialBalance - 1).toString());
+
+                balance = await token.balanceOf(otherUser);
+                balance.toString().should.equal('1');
+            });
+
+            it('Transfer event emitted', async () => {
+                const log = result.logs[0];
+                log.event.should.equal('Transfer');
+                const event = log.args;
+                event.from.should.equal(deployer);
+                event.to.should.equal(otherUser);
+                event.tokenId.toString().should.equal(tokenId.toString());
+            });
+        });
+
+        /*describe('Transfer tokens to another contract', async () => {
+            let result;
+            let balance;
+            const tokenId = 2;
+            beforeEach(async () => {
+                console.log(token.address);
+                console.log(receiverContract.address);
+                result = await token.safeTransferFrom(deployer, receiverContract.address, tokenId, {from: deployer});
+            });
+
+            it('Check balances', async () => {
+                console.log(await token.retval());
+                balance = await token.balanceOf(deployer);
+                balance.toString().should.equal((initialBalance - 1).toString());
+
+                balance = await token.balanceOf(receiverContract.address);
+                balance.toString().should.equal('1');
+            });
+
+            it('Transfer event emitted', async () => {
+                const log = result.logs[0];
+                log.event.should.equal('Transfer');
+                const event = log.args;
+                event.from.should.equal(deployer);
+                event.to.should.equal(receiverContract.address);
+                event.tokenId.toString().should.equal(tokenId.toString());
+            });
+
+        });*/
     });
 });
