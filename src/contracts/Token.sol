@@ -134,19 +134,13 @@ contract Token is ERC165, ERC721 {
 
     function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) public {
         transferFrom(_from, _to, _tokenId);
-        uint32 size;
-        //size = to.isContract();
-        assembly {
-            size := extcodesize(_to)
-        }
-
-        if (size > 0) {
+        if(_to.isContract()) {
             bytes4 retval = IERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data);
             require(retval == _ERC721_RECEIVED);
         }
     }
 
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) public {
-        safeTransferFrom(_from, _to, _tokenId);
+        safeTransferFrom(_from, _to, _tokenId, '');
     }
 }
