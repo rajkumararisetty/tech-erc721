@@ -1,6 +1,6 @@
-const Token = artifacts.require('TokenERC721Metadata');
+const Token = artifacts.require('Token');
 
 module.exports = function(deployer) {
 	const initalSupply = 0;
-	deployer.deploy(Token, initalSupply, 'Raj', 'R');
+	deployer.deploy(Token, initalSupply, 'Raj', 'R', 'https://www.super.com/');
 }

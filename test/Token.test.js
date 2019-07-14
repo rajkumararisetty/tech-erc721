@@ -5,12 +5,12 @@ require('chai').use(require('chai-as-promised')).should();
 
 contract('Token', ([deployer, otherUser, operator]) => {
     let token;
-    let receiverContract;
+    //let receiverContract;
     const initialBalance = 10;
     beforeEach(async () => {
         // Deploy token
-        token = await Token.new(initialBalance);
-        receiverContract = await Token.new(1);
+        token = await Token.new(initialBalance, 'Super', 'S', 'https://www.super.com/');
+        //receiverContract = await Token.new(1);
     });
 
     describe('Balance after deployemt', () => {
